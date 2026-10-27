@@ -1,0 +1,51 @@
+{
+  "name": "sincro280r",
+  "version": "1.0.0",
+  "description": "Gerador NC Studio ATC Arcs (mm) para CNC Router Sincro280r",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis portable zip --x64 --ia32",
+    "build:portable": "electron-builder --win portable --ia32",
+    "build:installer": "electron-builder --win nsis --ia32"
+  },
+  "author": "Sincro280r",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.sincro280r.ncgenerator",
+    "productName": "Sincro280r NC Generator",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": "src/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sincro280r NC Generator"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*"
+    ]
+  }
+}

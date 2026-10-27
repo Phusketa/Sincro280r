@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sincro280r — NC Generator</title>
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <div class="app">
+    <!-- ── Header ──────────────────────────────────────── -->
+    <header class="app-header">
+      <div class="logo-group">
+        <span class="logo">Sincro280r</span>
+        <span class="logo-sub">NC Generator</span>
+      </div>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="piece-tab">✏️ Peça</button>
+        <button class="tab-btn" data-tab="tools-tab">🔧 Ferramentas</button>
+        <button class="tab-btn" data-tab="nesting-tab">🧩 Nesting</button>
+        <button class="tab-btn" data-tab="viewer-tab">🖥️ Visualizador NC</button>
+        <button class="tab-btn" data-tab="settings-tab">⚙️ Configurações</button>
+      </nav>
+      <div class="header-spacer"></div>
+      <span class="license-header-badge" id="license-badge" onclick="App.openLicenseModal()" title="Clique para gerenciar a licença e ver o ID da Máquina">⏳ Trial: 7d</span>
+      <span class="header-info" id="header-info">NC Studio ATC Arcs (mm)</span>
+    </header>
+
+    <!-- ── Content ─────────────────────────────────────── -->
+    <div class="app-content">
+
+      <!-- ════════ PIECE TAB ════════ -->
+      <div class="tab-panel active" id="piece-tab">
+
+        <!-- Left Panel: Piece Config + Operations -->
+        <aside class="panel-left">
+          <div class="panel-section">
+            <div class="section-title">CONFIGURAÇÃO DA PEÇA</div>
+
+            <div class="form-group">
+              <label>Nome da Peça</label>
+              <input type="text" id="piece-name" value="sem_nome" placeholder="Nome da peça">
+            </div>
+
+            <div class="piece-dims" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: end;">
+              <div>
+                <div class="dim-label" style="font-size: 11px; font-weight: 600; margin-bottom: 4px; min-height: 28px; display: flex; flex-direction: column; justify-content: flex-end;" title="Limite máximo do eixo X da máquina: 1850mm">L (mm) <span style="font-size: 9px; color: #888;">(máx 1850)</span></div>
+                <input type="number" id="piece-width" value="800" min="1" max="1850">
+              </div>
+              <div>
+                <div class="dim-label" style="font-size: 11px; font-weight: 600; margin-bottom: 4px; min-height: 28px; display: flex; flex-direction: column; justify-content: flex-end;" title="Limite máximo do eixo Y da máquina: 2750mm">A (mm) <span style="font-size: 9px; color: #888;">(máx 2750)</span></div>
+                <input type="number" id="piece-height" value="500" min="1" max="2750">
+              </div>
+              <div>
+                <div class="dim-label" style="font-size: 11px; font-weight: 600; margin-bottom: 4px; min-height: 28px; display: flex; flex-direction: column; justify-content: flex-end;" title="Espessura da chapa/peça">E (mm) <span style="font-size: 9px; color: #888;">(espessura)</span></div>
+                <input type="number" id="piece-depth" value="15" min="1">
+              </div>
+            </div>
+
+            <div class="checkbox-group" style="margin-top: 10px; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" id="piece-grain" style="accent-color: var(--accent);" onchange="App.togglePieceGrain()">
+              <label for="piece-grain" style="font-size: 11px; font-weight: 600; cursor: pointer; color: var(--accent);">🪵 Veio da Madeira (Fixo / Sem Rotação)</label>
+            </div>
+          </div>
+
+          <div class="panel-section" style="padding-bottom: 4px;">
+            <div class="section-title">CONFIGURAÇÃO NC</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Altura Segura Z (mm)</label>
+                <input type="number" id="safe-z" value="10" min="0" step="0.5">
+              </div>
+              <div class="form-group">
+                <label>Z Aproximação (mm)</label>
+                <input type="number" id="approach-z" value="2" min="0" step="0.5">
+              </div>
+            </div>
+          </div>
+
+          <!-- OPERAÇÕES E BIBLIOTECA DA PEÇA -->
+          <div class="panel-section" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <!-- Subtabs Header -->
+            <div class="ops-subtabs-nav" style="display: flex; gap: 4px; margin-bottom: 10px;">
+              <button class="ops-subtab-btn active" id="btn-ops-subtab-active" onclick="App.switchOpsSubtab('active')" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--accent); cursor: pointer;">
+                📋 Operações
+              </button>
+              <button class="ops-subtab-btn" id="btn-ops-subtab-library" onclick="App.switchOpsSubtab('library')" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer;">
+                📁 Salvas
+              </button>
+            </div>
+
+            <!-- Subtab 1: Operações Ativas da Peça -->
+            <div id="ops-subtab-content-active" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Operações Ativas</span>
+                <button id="btn-clear-all-ops" onclick="App.clearAllOperations()" title="Excluir todas as operações da peça" style="background: rgba(255, 82, 82, 0.12); color: #ff5252; border: 1px solid rgba(255, 82, 82, 0.3); border-radius: 4px; padding: 3px 8px; font-size: 10px; font-weight: 600; cursor: pointer; display: none; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                  🗑 Excluir Todas
+                </button>
+              </div>
+              <div class="operations-list" id="operations-list">
+                <div class="empty-state" id="ops-empty">
+                  <div class="empty-icon">📐</div>
+                  Nenhuma operação criada.<br>Selecione Linha, Curvo, Caminho, Círculo ou Retângulo.
+                </div>
+              </div>
+            </div>
+
+            <!-- Subtab 2: Biblioteca de Operações com Pastas -->
+            <div id="ops-subtab-content-library" class="hidden" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Pastas Salvas</span>
+                <button class="btn btn-secondary" onclick="App.promptCreateLibraryFolder()" style="padding: 3px 8px; font-size: 10px;">+ Nova Pasta</button>
+              </div>
+              <div id="library-folders-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+          </div>
+
+          <!-- Save Buttons -->
+          <div class="save-section" style="display: flex; gap: 6px;">
+            <button class="save-btn" id="btn-save-piece" onclick="App.openSavePieceModal()" style="background: linear-gradient(135deg, #00b4d8, #0077b6); flex: 1;">💾 Salvar Peça</button>
+            <button class="save-btn" id="btn-save-nc" onclick="App.saveNC()" style="flex: 1;">💾 Salvar .NC</button>
+          </div>
+        </aside>
+
+        <!-- Center Panel: Canvas + View Controls -->
+        <div class="panel-center">
+          <!-- View Mode Switcher Overlay -->
+          <div class="view-mode-bar">
+            <button class="view-mode-btn active" data-mode="2d" onclick="PieceEditor.setViewMode('2d')">2D</button>
+            <button class="view-mode-btn" data-mode="3d" onclick="PieceEditor.setViewMode('3d')">3D</button>
+            <button class="view-mode-btn" data-mode="raio-x" onclick="PieceEditor.setViewMode('raio-x')">⚡ Raio-X</button>
+
+            <div class="view-controls-3d" id="view-controls-3d" style="display: flex;">
+              <button class="view-ctrl-btn active" id="btn-toggle-direction" title="Sentido dos Vetores: Ativado (Clique para ocultar)" onclick="PieceEditor.toggleDirection()">🏁 Sentido</button>
+              <button class="view-ctrl-btn" title="Centralizar Peça (Resetar Vista)" onclick="PieceEditor.resetView()">🔄 Centralizar</button>
+              <button class="view-ctrl-btn" title="Aumentar Zoom" onclick="PieceEditor.adjustZoom(1.2)">➕</button>
+              <button class="view-ctrl-btn" title="Diminuir Zoom" onclick="PieceEditor.adjustZoom(1/1.2)">➖</button>
+            </div>
+          </div>
+
+          <canvas id="piece-canvas"></canvas>
+
+          <div class="canvas-info">
+            <span>Peça: <span class="val" id="canvas-dims">800 × 500 × 15 mm</span></span>
+            <span>Operações: <span class="val" id="canvas-ops">0</span></span>
+            <span id="canvas-coords-wrap" class="hidden">Cursor: <span class="val" id="canvas-coords">X0 Y0</span></span>
+          </div>
+        </div>
+
+        <!-- Right Panel: Drawing Tools & Operation Tools -->
+        <aside class="panel-right">
+          <div class="panel-section">
+            <div class="section-title">FERRAMENTAS DE DESENHO</div>
+            <div class="tool-buttons">
+              <button class="tool-btn" id="btn-tool-line" onclick="App.openToolModal('line')">
+                <span class="tool-icon">╱</span>
+                Linha
+              </button>
+              <button class="tool-btn" id="btn-tool-curve" onclick="App.openToolModal('curve')">
+                <span class="tool-icon">◠</span>
+                Curvo
+              </button>
+              <button class="tool-btn" id="btn-tool-path" onclick="App.openToolModal('path')">
+                <span class="tool-icon">⬡</span>
+                Caminho
+              </button>
+              <button class="tool-btn" id="btn-tool-circle" onclick="App.openToolModal('circle')">
+                <span class="tool-icon">◯</span>
+                Círculo
+              </button>
+              <button class="tool-btn" id="btn-tool-rect" onclick="App.openToolModal('rect')">
+                <span class="tool-icon">▭</span>
+                Retângulo
+              </button>
+              <button class="tool-btn" id="btn-tool-drill" onclick="App.openToolModal('drill')">
+                <span class="tool-icon">🎯</span>
+                Furar
+              </button>
+              <button class="tool-btn" id="btn-tool-ripado" onclick="App.openRipadoModal()">
+                <span class="tool-icon">║║</span>
+                Ripado
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="section-title">FERRAMENTAS DE OPERAÇÕES</div>
+            <div style="display: flex; gap: 8px;">
+              <button class="tool-btn" id="btn-tool-park" onclick="App.addPark()" style="flex: 1; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
+                <span class="tool-icon" style="font-size: 16px; margin-bottom: 0;">🅿️</span>
+                Park
+              </button>
+              <button class="tool-btn" id="btn-tool-array-copy" onclick="App.openArrayCopyModal()" style="flex: 1; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: var(--bg-card); color: var(--accent); border: 1px solid var(--accent);" title="Criar Repetição em Matriz Retangular (X e Y)">
+                <span class="tool-icon" style="font-size: 16px; margin-bottom: 0;">❖</span>
+                Matriz X/Y
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-section" id="variables-section">
+            <div class="section-title">VARIÁVEIS</div>
+
+            <table class="vars-table">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Nome</th>
+                  <th>Valor / Fórmula</th>
+                  <th style="text-align: right; width: 30%;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="vars-table-body">
+                <tr class="var-row-system">
+                  <td style="color: #00b4d8; font-weight: 700;">L</td>
+                  <td style="font-family: monospace;" id="var-val-L">800 mm</td>
+                  <td style="text-align: right; color: #666; font-size: 10px;">🔒 Fixa</td>
+                </tr>
+                <tr class="var-row-system">
+                  <td style="color: #00b4d8; font-weight: 700;">A</td>
+                  <td style="font-family: monospace;" id="var-val-A">500 mm</td>
+                  <td style="text-align: right; color: #666; font-size: 10px;">🔒 Fixa</td>
+                </tr>
+                <tr class="var-row-system">
+                  <td style="color: #00b4d8; font-weight: 700;">E</td>
+                  <td style="font-family: monospace;" id="var-val-E">15 mm</td>
+                  <td style="text-align: right; color: #666; font-size: 10px;">🔒 Fixa</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Inline Form to Add / Edit custom variable -->
+            <div style="display: flex; gap: 4px; align-items: center; margin-top: 6px;">
+              <input type="text" id="new-var-name" placeholder="Var (ex: C)" style="width: 70px; text-transform: uppercase; padding: 6px; font-size: 11px;" maxlength="3">
+              <input type="text" id="new-var-val" placeholder="Valor / Fórmula (ex: 50)" style="flex: 1; padding: 6px; font-size: 11px;">
+              <button class="btn btn-primary" id="btn-save-var" onclick="App.addCustomVariable()" style="padding: 6px 12px; font-size: 14px; font-weight: bold;" title="Adicionar / Salvar Variável">+</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ════════ TOOLS TAB (Sub-tabs Structure) ════════ -->
+      <div class="tab-panel" id="tools-tab">
+        <div class="tools-layout">
+          <!-- Sub-tabs Navigation -->
+          <div class="tools-subtabs-nav">
+            <button class="tools-subtab-btn active" data-subtab="register">✏️ Cadastro de Ferramentas</button>
+            <button class="tools-subtab-btn" data-subtab="magazine">🎰 Posições no Magazine (14 Slots)</button>
+            <button class="tools-subtab-btn" data-subtab="drill">🎯 Cabeçote de Furação (T21 - T30)</button>
+          </div>
+
+          <!-- Subtab 1: Cadastro 3D de Ferramentas -->
+          <div class="tools-subtab-content active" id="tools-subtab-register">
+            <!-- Form Left -->
+            <div class="tool-form-3d-left">
+              <div class="panel-section">
+                <div class="section-title">CADASTRO TÉCNICO DE FRESA</div>
+
+                <div class="form-group">
+                  <label>Nome da Ferramenta</label>
+                  <input type="text" id="tool-name" placeholder="Ex: Fresa Reta 6mm">
+                </div>
+
+                <div class="form-group">
+                  <label>Tipo de Ferramenta</label>
+                  <select id="tool-type" onchange="ToolsManager.onToolTypeChange()">
+                    <option value="cava" selected>🟢 Fresa Cava (Puxador 35°)</option>
+                    <option value="canaletado">⚙️ Fresa Canaletado</option>
+                    <option value="reta">🔹 Fresa Reta</option>
+                    <option value="limpeza">🔸 Fresa de Limpeza</option>
+                    <option value="vbits">🔻 V-Bits</option>
+                    <option value="y45">🔶 Y45°</option>
+                    <option value="broca">🎯 Broca</option>
+                  </select>
+                </div>
+
+                <div class="form-divider"></div>
+                <div class="section-subtitle">MEDIDAS DA FRESA (DESENHO TÉCNICO)</div>
+
+                <div class="form-row mb-8">
+                  <div class="form-group">
+                    <label>CT - Comp. Total (mm)</label>
+                    <input type="number" id="tool-ct" value="65" min="1" step="0.5">
+                  </div>
+                  <div class="form-group">
+                    <label id="lbl-tool-ac">AC - Altura Corte (mm)</label>
+                    <input type="number" id="tool-ac" value="17.5" min="1" step="0.5">
+                  </div>
+                </div>
+
+                <div class="form-row mb-8">
+                  <div class="form-group">
+                    <label id="lbl-tool-d">øD - Diâmetro Maior (mm)</label>
+                    <input type="number" id="tool-d" value="36" min="0.1" step="0.1">
+                  </div>
+                  <div class="form-group">
+                    <label id="lbl-tool-h">øH - Diâmetro Haste (mm)</label>
+                    <input type="number" id="tool-h" value="16" min="0.1" step="0.1">
+                  </div>
+                </div>
+
+                <!-- Dynamic Cava Specific Technical Fields (Matching Blueprint) -->
+                <div id="cava-extra-fields">
+                  <div class="form-row mb-8">
+                    <div class="form-group">
+                      <label>øPescoço (mm)</label>
+                      <input type="number" id="tool-neck-d" value="18" min="0.1" step="0.1">
+                    </div>
+                    <div class="form-group">
+                      <label>Comp. Haste (mm)</label>
+                      <input type="number" id="tool-shank-len" value="45" min="1" step="0.5">
+                    </div>
+                  </div>
+
+                  <div class="form-row mb-8">
+                    <div class="form-group">
+                      <label>Ângulo Cava (°)</label>
+                      <input type="number" id="tool-angle" value="35" min="1" max="90" step="1">
+                    </div>
+                    <div class="form-group">
+                      <label>Altura Cava (mm)</label>
+                      <input type="number" id="tool-cava-h" value="13.5" min="0.1" step="0.1">
+                    </div>
+                  </div>
+
+                  <div class="form-group mb-8">
+                    <label>Passo Superior Topo (mm)</label>
+                    <input type="number" id="tool-top-offset" value="2" min="0" step="0.1">
+                  </div>
+                </div>
+
+                <div class="form-divider"></div>
+                <div class="section-subtitle">PARÂMETROS OPERACIONAIS</div>
+
+                <div class="form-row mb-8">
+                  <div class="form-group">
+                    <label>Prof. Passagem (mm)</label>
+                    <input type="number" id="tool-pass-depth" value="3" min="0.1" step="0.1">
+                  </div>
+                  <div class="form-group" id="group-step-over">
+                    <label>Passo Lateral (mm)</label>
+                    <input type="number" id="tool-step-over" value="3" min="0.1" step="0.1">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Velocidade (RPM)</label>
+                  <input type="number" id="tool-rpm" value="18000" min="100" step="100">
+                </div>
+
+                <div class="form-row mb-8">
+                  <div class="form-group" id="group-feed-rate">
+                    <label>Taxa de Avanço (m/min)</label>
+                    <input type="number" id="tool-feed-rate" value="4" min="0.1" step="0.1">
+                  </div>
+                  <div class="form-group">
+                    <label>Taxa Perfuração (m/min)</label>
+                    <input type="number" id="tool-plunge-rate" value="1.5" min="0.1" step="0.1">
+                  </div>
+                </div>
+
+                <button class="btn btn-primary btn-full mt-12" id="tool-save-btn" onclick="ToolsManager.saveTool()">Salvar Ferramenta</button>
+              </div>
+            </div>
+
+            <!-- Preview Right: Live 3D Fresa Model -->
+            <div class="tool-preview-3d-right">
+              <div class="preview-3d-header">
+                <span class="preview-3d-title">VISUALIZAÇÃO 3D DA FRESA</span>
+                <span class="preview-3d-hint">Arraste para rotacionar o modelo em 3D</span>
+              </div>
+              <div class="canvas-3d-wrap">
+                <canvas id="tool-3d-canvas"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subtab 2: Posições no Magazine -->
+          <div class="tools-subtab-content" id="tools-subtab-magazine">
+            <div class="magazine-panel">
+              <div class="section-title">MAGAZINE DA CNC — 14 POSIÇÕES</div>
+              <div class="magazine-grid" id="magazine-grid"></div>
+
+              <!-- Painel de Ferramentas Arrastáveis -->
+              <div class="draggable-tools-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <div class="section-title" style="margin-bottom: 8px;">✋ FERRAMENTAS CADASTRADAS — ARRASTE PARA O SLOT DESEJADO</div>
+                <div class="draggable-tools-list" id="draggable-tools-list" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+              </div>
+            </div>
+
+            <div class="tools-table-wrap">
+              <div class="section-title">FERRAMENTAS CADASTRADAS</div>
+              <table class="tools-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>CT (mm)</th>
+                    <th>AC (mm)</th>
+                    <th>D (mm)</th>
+                    <th>H (mm)</th>
+                    <th>Passo Prof.</th>
+                    <th>RPM</th>
+                    <th>Avanço</th>
+                    <th>Posição</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tools-table-body"></tbody>
+              </table>
+              <div class="empty-state hidden" id="tools-empty">
+                <div class="empty-icon">🔧</div>
+                Nenhuma ferramenta cadastrada.
+              </div>
+            </div>
+          </div>
+
+          <!-- Subtab 3: Cabeçote de Furação -->
+          <div class="tools-subtab-content" id="tools-subtab-drill">
+            <div class="magazine-panel">
+              <div class="section-title">CABEÇOTE DE FURAÇÃO — 10 POSIÇÕES (T21 - T30)</div>
+              <div class="magazine-grid drill-grid" id="drill-grid"></div>
+
+              <!-- Painel de Ferramentas Arrastáveis -->
+              <div class="draggable-tools-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <div class="section-title" style="margin-bottom: 8px;">✋ FERRAMENTAS CADASTRADAS — ARRASTE PARA O SLOT DESEJADO</div>
+                <div class="draggable-tools-list" id="draggable-tools-list-drill" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+              </div>
+            </div>
+
+            <div class="tools-table-wrap">
+              <div class="section-title">FERRAMENTAS CADASTRADAS</div>
+              <table class="tools-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>CT (mm)</th>
+                    <th>AC (mm)</th>
+                    <th>D (mm)</th>
+                    <th>H (mm)</th>
+                    <th>Passo Prof.</th>
+                    <th>RPM</th>
+                    <th>Avanço</th>
+                    <th>Posição</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="drill-tools-table-body"></tbody>
+              </table>
+              <div class="empty-state hidden" id="drill-tools-empty">
+                <div class="empty-icon">🔧</div>
+                Nenhuma ferramenta cadastrada.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ════════ NESTING TAB ════════ -->
+      <div class="tab-panel" id="nesting-tab">
+        <aside class="panel-left" style="width: 330px;">
+          <div class="panel-section">
+            <div class="section-title">PROJETOS / PASTAS DE PEÇAS</div>
+            <div class="form-group">
+              <input type="text" id="nesting-search-input" placeholder="🔍 Buscar pasta (ex: 815454)..." style="width: 100%; padding: 8px; font-size: 12px;">
+            </div>
+            <div style="display: flex; gap: 4px; margin-top: 6px;">
+              <button class="btn btn-sm btn-secondary" onclick="App.selectAllNestingPieces()" style="flex: 1; font-size: 10px; padding: 4px;" title="Marcar todas as peças de todas as pastas">☑ Marcar</button>
+              <button class="btn btn-sm btn-secondary" onclick="App.deselectAllNestingPieces()" style="flex: 1; font-size: 10px; padding: 4px;" title="Desmarcar todas as peças">☐ Desmarcar</button>
+              <button class="btn btn-sm btn-secondary" onclick="App.expandAllNestingFolders()" style="flex: 1; font-size: 10px; padding: 4px;" title="Expandir todas as pastas de peças">▼ Expandir</button>
+              <button class="btn btn-sm btn-secondary" onclick="App.collapseAllNestingFolders()" style="flex: 1; font-size: 10px; padding: 4px;" title="Recolher todas as pastas de peças">▲ Recolher</button>
+            </div>
+          </div>
+
+          <div class="panel-section" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto;">
+            <div class="section-title">PEÇAS (SEPARADAS POR ESPESSURA)</div>
+            <div id="nesting-pieces-container" style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">
+                Nenhuma pasta selecionada.<br>Salve peças ou pesquise o código da pasta acima.
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="panel-center" style="display: flex; flex-direction: column;">
+          <div class="nesting-toolbar" style="display: flex; gap: 12px; align-items: center; background: var(--bg-secondary); padding: 10px 16px; border-bottom: 1px solid var(--border);">
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent);">CHAPA:</div>
+            <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+              L: <input type="number" id="nesting-sheet-w" value="1850" style="width: 65px; padding: 4px; font-size: 11px;"> mm
+              A: <input type="number" id="nesting-sheet-h" value="2750" style="width: 65px; padding: 4px; font-size: 11px;"> mm
+            </div>
+
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent); margin-left: 6px;">FRESA CORTE:</div>
+            <select id="nesting-cutter-select" style="padding: 4px 8px; font-size: 11px; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 4px;"></select>
+
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent); margin-left: 6px;">FOLGA:</div>
+            <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+              <input type="number" id="nesting-gap" value="2" min="0" step="0.5" style="width: 50px; padding: 4px; font-size: 11px;"> mm
+            </div>
+
+            <div style="font-size: 11px; font-weight: 700; color: #00e676; margin-left: 6px;" title="Sobrecorte Extra Passante na Mesa de Sacrifício">SOBRECORTE:</div>
+            <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;" title="Espessura + este valor (ex: 15 + 0.3 = 15.3mm)">
+              <input type="number" id="nesting-extra-cut" value="0.3" min="0" max="5" step="0.1" style="width: 55px; padding: 4px; font-size: 11px;"> mm
+            </div>
+
+            <button class="btn btn-primary" onclick="App.runNestingCalculation()" style="white-space: nowrap; height: 34px; padding: 0 14px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; margin-left: auto;">🧩 Calcular Plano de Corte</button>
+            <button class="save-btn" onclick="App.saveNestingNC()" style="white-space: nowrap; height: 34px; padding: 0 14px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">💾 Gerar G-Code do Plano</button>
+          </div>
+
+          <!-- Multi-Sheet Navigation Bar -->
+          <div id="nesting-sheet-tabs-bar" style="display: none; align-items: center; gap: 8px; background: var(--bg-card); padding: 6px 16px; border-bottom: 1px solid var(--border); font-size: 11px;">
+            <span style="font-weight: 700; color: var(--accent);">CHAPAS DO PLANO:</span>
+            <div id="nesting-sheet-tabs-container" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;"></div>
+          </div>
+
+          <div style="flex: 1; position: relative;">
+            <canvas id="nesting-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════ NC VIEWER TAB ════════ -->
+      <div class="tab-panel" id="viewer-tab">
+        <!-- Left Sidebar: NC File Loader & Operator Info -->
+        <aside class="panel-left" style="width: 360px; display: flex; flex-direction: column; overflow-y: auto;">
+          <div class="panel-section">
+            <div class="section-title">CARREGAR ARQUIVO NC</div>
+            
+            <div class="nc-upload-box" onclick="document.getElementById('nc-file-input').click()">
+              <div style="font-size: 24px; margin-bottom: 6px;">📂</div>
+              <div style="font-weight: 600; font-size: 12px; color: var(--accent);">Abrir Arquivo .NC / G-Code</div>
+              <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Clique ou arraste o arquivo .NC, .CNC, .TXT aqui</div>
+              <input type="file" id="nc-file-input" accept=".nc,.cnc,.gcode,.txt" style="display: none;" onchange="NCViewer.loadFile(this.files[0])">
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <button class="btn btn-secondary btn-full" onclick="App.loadNestingToViewer()" style="font-size: 11px; padding: 8px;">⚡ Nesting Atual</button>
+              <button class="btn btn-secondary btn-full" onclick="App.loadEditorPieceToViewer()" style="font-size: 11px; padding: 8px;">⚡ Peça Atual</button>
+            </div>
+          </div>
+
+          <!-- Operator Reference Stop Instruction Card -->
+          <div class="panel-section" style="background: rgba(255, 82, 82, 0.07); border: 1px solid rgba(255, 82, 82, 0.3);">
+            <div class="section-title" style="color: #ff5252;">📍 GUIA OPERACIONAL DA MÁQUINA</div>
+            <div style="display: flex; gap: 10px; align-items: flex-start; margin-top: 4px;">
+              <div style="font-size: 20px;">🔴</div>
+              <div style="font-size: 11px; line-height: 1.4; color: #ff8a8a;">
+                <strong>POSIÇÃO DO BATENTE (X0, Y0): CANTO SUPERIOR DIREITO</strong><br>
+                O operador deve encostar a chapa nos pinos pneumáticos (1 pino em X a 70mm do zero, 2 pinos em Y a 70mm e 140mm).
+              </div>
+            </div>
+          </div>
+
+          <!-- NC Info Stats -->
+          <div class="panel-section">
+            <div class="section-title">INFORMAÇÕES DO ARQUIVO NC</div>
+            
+            <div style="background: var(--bg-card); padding: 10px; border-radius: 6px; font-size: 11px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Arquivo:</span>
+                <span id="nc-info-filename" style="font-weight: 700; color: var(--accent);">Nenhum</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Tamanho Peça:</span>
+                <span id="nc-info-dims" style="font-weight: 600; color: var(--green);">-</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Comprimento Corte:</span>
+                <span id="nc-info-cutlen" style="font-weight: 600;">-</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Ferramentas Usadas:</span>
+                <span id="nc-info-tools" style="font-weight: 600; color: #ffd600;">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Simulation & G-Code Inspector -->
+          <div class="panel-section" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="section-title">SIMULADOR & INSPEÇÃO DE CÓDIGO G</div>
+
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+              <button class="btn btn-primary" id="nc-play-btn" onclick="NCViewer.togglePlay()" style="padding: 6px 12px; font-size: 11px;">▶️ Simular</button>
+              <input type="range" id="nc-sim-slider" min="0" max="100" value="0" style="flex: 1; accent-color: var(--accent);" oninput="NCViewer.onSliderChange(this.value)">
+            </div>
+
+            <div id="nc-code-preview" style="flex: 1; height: 180px; overflow-y: auto; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; padding: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px;"></div>
+          </div>
+        </aside>
+
+        <!-- Right Viewport: Machine Table Canvas -->
+        <div class="panel-center" style="display: flex; flex-direction: column;">
+          <!-- Viewport Toolbar -->
+          <div class="nesting-toolbar" style="display: flex; gap: 12px; align-items: center; background: var(--bg-secondary); padding: 8px 16px; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-secondary btn-sm" onclick="NCViewer.toggleViewMode('2d')">📐 2D Mesa CNC</button>
+              <button class="btn btn-secondary btn-sm" onclick="NCViewer.toggleViewMode('3d')">🧊 3D Isométrico</button>
+            </div>
+
+            <div style="height: 16px; width: 1px; background: var(--border);"></div>
+
+            <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" checked onchange="NCViewer.toggleRapid()" style="accent-color: var(--accent);"> Avanço Rápido (G00)
+            </label>
+
+            <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" checked onchange="NCViewer.toggleDims()" style="accent-color: var(--accent);"> Cotas & Dimensões
+            </label>
+
+            <button class="btn btn-secondary btn-sm" onclick="NCViewer.resetView()" style="margin-left: auto;">🔍 Resetar Vista</button>
+          </div>
+
+          <!-- Canvas Container -->
+          <div style="flex: 1; position: relative;">
+            <canvas id="nc-viewer-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════ SETTINGS TAB ════════ -->
+      <div class="tab-panel" id="settings-tab" style="overflow-y: auto;">
+        <div class="settings-container">
+          
+          <!-- Left Column -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Column 1: Aparência e Tema -->
+            <div class="panel-section" style="padding: 20px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+              <div class="section-title" style="font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; color: var(--accent);">
+                <span>🎨</span> APARÊNCIA E TEMA DA INTERFACE
+              </div>
+              
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 18px; line-height: 1.5;">
+                Selecione o estilo visual preferido para a aplicação. O tema escolhido é salvo automaticamente.
+              </p>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <!-- Dark Mode Card -->
+                <div class="theme-card active" id="theme-card-dark" onclick="App.setTheme('dark')">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-weight: 700; font-size: 13px; color: var(--text-primary);">🌙 Dark Mode</span>
+                    <span class="theme-active-badge" id="theme-badge-dark" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: rgba(0, 180, 216, 0.2); color: var(--accent);">Ativo</span>
+                  </div>
+                  <div style="height: 54px; background: #0a0d14; border-radius: 6px; border: 1px solid #242c42; padding: 6px; display: flex; gap: 6px;">
+                    <div style="width: 30%; background: #10141f; border-radius: 4px;"></div>
+                    <div style="flex: 1; background: #171d2b; border-radius: 4px; border: 1px dashed #00b4d8;"></div>
+                  </div>
+                </div>
+
+                <!-- Light Mode Card -->
+                <div class="theme-card" id="theme-card-light" onclick="App.setTheme('light')">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-weight: 700; font-size: 13px; color: #0f172a;">☀️ Light Mode</span>
+                    <span class="theme-active-badge" id="theme-badge-light" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: rgba(2, 132, 199, 0.2); color: #0284c7; display: none;">Ativo</span>
+                  </div>
+                  <div style="height: 54px; background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; padding: 6px; display: flex; gap: 6px;">
+                    <div style="width: 30%; background: #ffffff; border-radius: 4px; border: 1px solid #cbd5e1;"></div>
+                    <div style="flex: 1; background: #ffffff; border-radius: 4px; border: 1px dashed #0284c7;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 3: Diretorio de Exportacao Automatizada -->
+            <div class="panel-section" style="padding: 20px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+              <div class="section-title" style="font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; color: var(--accent);">
+                <span>📁</span> PASTA DE EXPORTAÇÃO AUTOMÁTICA DOS ARQUIVOS .NC
+              </div>
+
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.5;">
+                Defina a pasta padrão do computador onde os arquivos G-Code (<code>.NC</code> da peça e do plano de Nesting) serão salvos automaticamente.
+              </p>
+
+              <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                <input type="text" id="settings-export-path" readonly placeholder="Nenhuma pasta definida (abrirá a caixa de diálogo de 'Salvar Como...')" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; flex: 1; padding: 9px; background: var(--bg-input);">
+                <button class="btn btn-secondary" onclick="App.selectSettingsExportFolder()" style="padding: 9px 14px; white-space: nowrap; font-size: 11px;">📂 Selecionar Pasta</button>
+                <button class="btn btn-danger" onclick="App.clearSettingsExportFolder()" title="Limpar pasta padrão" style="padding: 9px; min-width: 34px;">✕</button>
+              </div>
+
+              <div class="checkbox-group" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="settings-auto-save-direct" style="accent-color: var(--accent);" onchange="App.toggleAutoSaveDirect(this.checked)">
+                <label for="settings-auto-save-direct" style="font-size: 11px; font-weight: 600; cursor: pointer; color: var(--text-primary);">⚡ Salvar direto na pasta acima sem abrir caixa de diálogo de salvar como (Salvamento Instantâneo)</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Column 2: Licenciamento e Registro -->
+            <div class="panel-section" style="padding: 20px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+              <div class="section-title" style="font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; color: var(--accent);">
+                <span>🔑</span> LICENCIAMENTO E REGISTRO DO SISTEMA
+              </div>
+
+              <!-- Status Box -->
+              <div id="settings-license-status-box" style="padding: 14px; border-radius: var(--radius); margin-bottom: 16px; background: var(--bg-tertiary); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 2px;">Status da Licença</div>
+                  <div id="settings-license-status-text" style="font-size: 13px; font-weight: 700; color: var(--text-primary);">Carregando...</div>
+                </div>
+                <div id="settings-license-status-badge" style="font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px;"></div>
+              </div>
+
+              <!-- Machine ID -->
+              <div class="form-group" style="margin-bottom: 14px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">ID do Computador (Hardware Fingerprint)</label>
+                <div style="display: flex; gap: 6px;">
+                  <input type="text" id="settings-machine-id" readonly style="font-family: monospace; font-weight: 700; letter-spacing: 1px; flex: 1; background: var(--bg-input);">
+                  <button class="btn btn-secondary" onclick="App.copySettingsMachineId()" style="padding: 6px 12px; white-space: nowrap; font-size: 11px;">📋 Copiar ID</button>
+                </div>
+                <span style="font-size: 10px; color: var(--text-muted); margin-top: 4px; display: block;">Envie este código ao suporte para gerar sua chave de liberação vitalícia ou temporária.</span>
+              </div>
+
+              <!-- License Key Activation -->
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Chave de Ativação (License Key)</label>
+                <input type="text" id="settings-license-key" placeholder="SINCRO-VIT-0-XXXXXX" style="font-family: monospace; text-transform: uppercase; padding: 8px; font-size: 12px; margin-bottom: 8px;">
+                <button class="btn btn-primary" onclick="App.activateSettingsKey()" style="width: 100%; padding: 9px; font-weight: 700; font-size: 12px;">🚀 Ativar Licença</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /app-content -->
+  </div><!-- /app -->
+
+  <!-- ════════ OPERATION POP-UP MODAL (Organic Modern Design) ════════ -->
+  <div class="op-modal" id="op-modal">
+    <div class="op-modal-dialog">
+      <div class="op-modal-header">
+        <div class="op-modal-title-wrap">
+          <span class="op-modal-icon" id="op-modal-icon">╱</span>
+          <h3 id="op-modal-title">Adicionar Linha</h3>
+        </div>
+        <button class="op-modal-close" onclick="App.closeToolModal()">✕</button>
+      </div>
+
+      <div class="op-modal-body">
+        <!-- Organic 2-column grid layout -->
+        <div class="op-modal-grid">
+          <!-- Left Column: Inline Form Fields -->
+          <div class="op-modal-col">
+            <!-- Line / Curve / Path coordinates -->
+            <div id="modal-line-coords-fields">
+              <div class="form-group form-group-inline">
+                <label>Comece X:</label>
+                <input type="text" id="modal-sx" value="0">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Comece Y:</label>
+                <input type="text" id="modal-sy" value="0">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Fim X:</label>
+                <input type="text" id="modal-ex" value="100">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Fim Y:</label>
+                <input type="text" id="modal-ey" value="0">
+              </div>
+            </div>
+
+            <!-- Curve specific fields -->
+            <div id="modal-curve-fields" class="hidden">
+              <div class="form-group form-group-inline">
+                <label>Raio (mm):</label>
+                <input type="text" id="modal-radius" value="50">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Direção:</label>
+                <select id="modal-dir">
+                  <option value="cw" selected>Direita (Horário)</option>
+                  <option value="ccw">Esquerda (Anti-horário)</option>
+                  <option value="cw180">Horário &gt; 180°</option>
+                  <option value="ccw180">Anti-horário &gt; 180°</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Circle specific fields -->
+            <div id="modal-circle-fields" class="hidden">
+              <div class="form-group form-group-inline">
+                <label>Centro X:</label>
+                <input type="text" id="modal-circle-cx" value="400">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Centro Y:</label>
+                <input type="text" id="modal-circle-cy" value="250">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Raio (mm):</label>
+                <input type="text" id="modal-circle-r" value="50">
+              </div>
+              <div class="checkbox-group mt-8">
+                <input type="checkbox" id="modal-circle-pocket">
+                <label for="modal-circle-pocket">Pocket (Usinar Cavidade)</label>
+              </div>
+            </div>
+
+            <!-- Rect specific fields -->
+            <div id="modal-rect-fields" class="hidden">
+              <div class="form-group form-group-inline">
+                <label>Canto X:</label>
+                <input type="text" id="modal-rect-x" value="100">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Canto Y:</label>
+                <input type="text" id="modal-rect-y" value="100">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Comprimento L:</label>
+                <input type="text" id="modal-rect-l" value="200">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Largura W:</label>
+                <input type="text" id="modal-rect-w" value="150">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>Raio Canto (mm):</label>
+                <input type="text" id="modal-rect-r" value="0">
+              </div>
+              <div class="checkbox-group mt-8">
+                <input type="checkbox" id="modal-rect-pocket" onchange="App.updateLivePreview()">
+                <label for="modal-rect-pocket">Esvaziamento</label>
+              </div>
+            </div>
+
+            <!-- Drill specific fields (matching user design mockup) -->
+            <div id="modal-drill-fields" class="hidden" style="width: 100%;">
+              <!-- Row 1: Diâmetro Select Bar -->
+              <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 0;">Diâmetro:</label>
+                <select id="modal-drill-diameter" style="min-width: 220px; padding: 6px 10px; font-size: 12px; font-weight: 600; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);" onchange="App.onDrillDiameterChange(); App.updateLivePreview();"></select>
+              </div>
+
+              <!-- 2-Column Grid matching Design Mockup -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <!-- Left Sub-column -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div class="form-group form-group-inline" style="margin-bottom: 0;">
+                    <label style="flex: 1; font-size: 11px;">Posição X (mm):</label>
+                    <input style="width: 80px; flex: none; text-align: center;" type="text" id="modal-drill-x" value="50" oninput="App.updateLivePreview()">
+                  </div>
+                  <div class="form-group form-group-inline" style="margin-bottom: 0;">
+                    <label style="flex: 1; font-size: 11px;">Posição Y (mm):</label>
+                    <input style="width: 80px; flex: none; text-align: center;" type="text" id="modal-drill-y" value="50" oninput="App.updateLivePreview()">
+                  </div>
+                  <div class="form-group form-group-inline" style="margin-bottom: 0;">
+                    <label style="flex: 1; font-size: 11px;">Profundidade (mm):</label>
+                    <input style="width: 80px; flex: none; text-align: center;" type="text" id="modal-drill-depth" value="15" oninput="App.updateLivePreview()">
+                  </div>
+
+                  <div class="checkbox-group" style="display: flex; gap: 14px; margin-top: 6px; padding-top: 4px;">
+                    <label style="font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none;">
+                      <input type="checkbox" id="modal-drill-mirror-x" style="accent-color: var(--accent); width: 15px; height: 15px;" onchange="App.updateLivePreview()">
+                      <span>Espelhado X</span>
+                    </label>
+                    <label style="font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none;">
+                      <input type="checkbox" id="modal-drill-mirror-y" style="accent-color: var(--accent); width: 15px; height: 15px;" onchange="App.updateLivePreview()">
+                      <span>Espelhado Y</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Right Sub-column -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div class="form-group form-group-inline" style="margin-bottom: 0;">
+                    <label style="flex: 1; font-size: 11px;">Quantidade:</label>
+                    <input style="width: 80px; flex: none; text-align: center;" type="number" id="modal-drill-qty" value="1" min="1" step="1" oninput="App.updateDrillQtyState(); App.updateLivePreview();">
+                  </div>
+                  <div class="form-group form-group-inline" style="margin-bottom: 0;">
+                    <label style="flex: 1; font-size: 11px;">Deslocamento X (mm):</label>
+                    <input style="width: 80px; flex: none; text-align: center;" type="text" id="modal-drill-dx" value="32" disabled oninput="App.updateLivePreview()">
+                  </div>
+                  <div class="form-group form-group-inline" style="margin-bottom: 0;">
+                    <label style="flex: 1; font-size: 11px;">Deslocamento Y (mm):</label>
+                    <input style="width: 80px; flex: none; text-align: center;" type="text" id="modal-drill-dy" value="0" disabled oninput="App.updateLivePreview()">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Correção Segmented Switch & Milling Parameters -->
+          <div class="op-modal-col">
+            <!-- Correção Segmented Pill Control -->
+            <div class="form-group">
+              <label class="mb-4">Correção:</label>
+              <div class="correction-segmented-control">
+                <button class="correction-btn" data-val="esquerda" onclick="App.setModalCorrection('esquerda')">
+                  <span class="correction-icon">⇇</span>
+                  <span>Esquerda</span>
+                </button>
+                <button class="correction-btn active" data-val="meio" onclick="App.setModalCorrection('meio')">
+                  <span class="correction-icon">⇋</span>
+                  <span>Meio</span>
+                </button>
+                <button class="correction-btn" data-val="direita" onclick="App.setModalCorrection('direita')">
+                  <span class="correction-icon">⇉</span>
+                  <span>Direita</span>
+                </button>
+              </div>
+              <input type="hidden" id="modal-correction" value="meio">
+            </div>
+
+            <div class="form-group form-group-inline">
+              <label>Largura:</label>
+              <input type="text" id="modal-groove-w" value="6">
+            </div>
+            <div class="form-group form-group-inline">
+              <label>Profundidade:</label>
+              <input type="text" id="modal-groove-d" value="5">
+            </div>
+
+            <div class="form-group form-group-inline">
+              <label>Fresa:</label>
+              <select id="modal-tool-select"></select>
+            </div>
+
+            <div id="modal-organic-container" class="checkbox-group" style="margin-top: 10px; display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 6px;">
+              <input type="checkbox" id="modal-is-organic" style="accent-color: #00e676; width: 15px; height: 15px; cursor: pointer;" onchange="App.onModalOrganicChange()">
+              <label for="modal-is-organic" style="font-size: 11px; font-weight: 600; cursor: pointer; color: #00e676;" title="Define este vetor como o contorno de corte externo da peça orgânica no Nesting">🌿 Contorno de Peça Orgânica</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Path specific content (3-column vector path builder matching reference UI) -->
+        <div id="modal-path-fields" class="hidden">
+          <div class="path-builder-container">
+
+            <!-- Coluna 1: Tabela de Sequência de Pontos / Elementos -->
+            <div class="path-col-left">
+              <div class="path-table-header">
+                <span style="width: 28px;">ID</span>
+                <span style="flex: 1;">Categoria / Ponto</span>
+              </div>
+              <div class="path-points-list" id="path-points-list">
+                <!-- Executado via JS:
+                     0 | Ponto(0,0,0)
+                     1 | Linha(50,50,0)
+                     2 | Linha(100,150,0)
+                     3 | Arco(150,200,0)
+                -->
+              </div>
+              <button class="btn btn-danger btn-sm btn-full mt-6" onclick="App.pathDeleteSelectedSeg()" id="path-del-seg-btn" disabled style="font-size: 11px; padding: 5px;">
+                🗑 Excluir Elemento
+              </button>
+            </div>
+
+            <!-- Coluna 2: Formulário do Elemento Atual (Ponto Inicial, Linha ou Arco) -->
+            <div class="path-col-center">
+              <div class="path-seg-type-selector">
+                <button class="btn btn-secondary btn-sm path-type-btn active" id="path-type-line-btn" onclick="App.pathSelectSegType('line')">Linha</button>
+                <button class="btn btn-secondary btn-sm path-type-btn" id="path-type-curve-btn" onclick="App.pathSelectSegType('curve')">Arco</button>
+              </div>
+
+              <div class="path-seg-card">
+                <div class="path-seg-card-title" id="path-seg-card-title">📍 Ponto Inicial (ID 0)</div>
+                
+                <div class="form-group form-group-inline mb-6">
+                  <label style="width: 50px;">X:</label>
+                  <input type="text" id="pseg-x" value="0" oninput="App.updateLivePreview()">
+                </div>
+                <div class="form-group form-group-inline mb-6">
+                  <label style="width: 50px;">Y:</label>
+                  <input type="text" id="pseg-y" value="0" oninput="App.updateLivePreview()">
+                </div>
+
+                <!-- Campos específicos para Arco / Curva -->
+                <div id="path-curve-extra-fields" class="hidden">
+                  <div class="form-group form-group-inline mb-6">
+                    <label style="width: 50px;">Raio:</label>
+                    <input type="text" id="pseg-radius" value="50" oninput="App.updateLivePreview()">
+                  </div>
+                  <div class="form-group form-group-inline mb-6">
+                    <label style="width: 50px;">Direção:</label>
+                    <div class="dir-toggle-group">
+                      <button class="btn btn-secondary btn-sm dir-btn active" id="pseg-dir-cw" onclick="App.pathSelectDir('cw')" title="Horário (G02)" type="button">↻ Horário</button>
+                      <button class="btn btn-secondary btn-sm dir-btn" id="pseg-dir-ccw" onclick="App.pathSelectDir('ccw')" title="Anti-horário (G03)" type="button">↺ Anti-Horário</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="margin-top: auto; padding-top: 10px; text-align: right;">
+                  <button class="btn btn-primary btn-sm" id="path-save-seg-btn" onclick="App.pathSaveCurrentSeg()" style="min-width: 100px;">
+                    Modificar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coluna 3: Propriedades Globais do Caminho -->
+            <div class="path-col-right">
+              <div class="form-group form-group-inline mb-6">
+                <label style="width: 75px;">Largura:</label>
+                <input type="text" id="path-groove-w" value="6" oninput="App.updateLivePreview()">
+              </div>
+              <div class="form-group form-group-inline mb-6">
+                <label style="width: 75px;">Prof.:</label>
+                <input type="text" id="path-groove-d" value="5" oninput="App.updateLivePreview()">
+              </div>
+              <div class="form-group form-group-inline mb-6">
+                <label style="width: 75px;">Fresa:</label>
+                <select id="path-tool-select" style="flex: 1; padding: 4px; font-size: 11px;" onchange="App.updateLivePreview()"></select>
+              </div>
+
+              <div class="form-group mt-6">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px;">Correção:</label>
+                <div class="correction-btn-group">
+                  <button class="btn btn-secondary btn-sm corr-btn" id="path-corr-left" onclick="App.pathSelectCorrection('esquerda')" title="Esquerda (G41)" type="button">⬅ Esquerda</button>
+                  <button class="btn btn-secondary btn-sm corr-btn active" id="path-corr-mid" onclick="App.pathSelectCorrection('meio')" title="Centro / Sem compensação (G40)" type="button">🎯 Meio</button>
+                  <button class="btn btn-secondary btn-sm corr-btn" id="path-corr-right" onclick="App.pathSelectCorrection('direita')" title="Direita (G42)" type="button">➡ Direita</button>
+                </div>
+              </div>
+
+              <div class="checkbox-group mt-10">
+                <input type="checkbox" id="path-closed" onchange="App.pathToggleClosed(this.checked)">
+                <label for="path-closed" style="font-size: 11px; font-weight: 600;">Fechado</label>
+              </div>
+
+              <div id="path-organic-container" class="checkbox-group mt-10" style="display: none; align-items: center; gap: 6px; padding: 6px 8px; background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 6px;">
+                <input type="checkbox" id="path-is-organic" style="accent-color: #00e676; width: 15px; height: 15px; cursor: pointer;" onchange="App.onPathOrganicChange()">
+                <label for="path-is-organic" style="font-size: 11px; font-weight: 600; cursor: pointer; color: #00e676;" title="Define este caminho fechado como o contorno de corte externo da peça orgânica no Nesting">🌿 Contorno de Peça Orgânica</label>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /op-modal-body -->
+
+      <div class="op-modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeToolModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.submitToolModal()" style="min-width: 110px;">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Operation to Library Modal -->
+  <div class="magazine-modal" id="op-save-lib-modal">
+    <div class="magazine-modal-content" style="width: 400px;">
+      <h3 style="margin-bottom: 12px; font-size: 15px; color: var(--accent);">⭐ Salvar Operação na Biblioteca</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;" id="save-lib-op-summary"></p>
+      
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <label style="margin-bottom: 0;">Escolha a Pasta</label>
+          <button class="btn btn-sm btn-secondary" onclick="App.openNewLibraryFolderModal()" style="font-size: 10px; padding: 2px 6px;">+ Nova Pasta</button>
+        </div>
+        <select id="save-lib-folder-select" style="width: 100%; padding: 8px; font-size: 12px;"></select>
+      </div>
+      
+      <div class="form-group" style="margin-top: 10px;">
+        <label>Nome do Modelo / Operação</label>
+        <input type="text" id="save-lib-op-name" placeholder="Ex: Rebaixo de Canto 50mm" style="width: 100%; padding: 8px; font-size: 12px;">
+      </div>
+
+      <div class="modal-actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="App.closeSaveToLibraryModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.submitSaveToLibrary()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create New Library Folder Modal -->
+  <div class="magazine-modal" id="new-library-folder-modal">
+    <div class="magazine-modal-content" style="width: 380px;">
+      <h3 style="margin-bottom: 12px; font-size: 15px; color: var(--accent);">📁 Nova Pasta na Biblioteca</h3>
+      
+      <div class="form-group">
+        <label>Nome da Pasta</label>
+        <input type="text" id="new-lib-folder-name" placeholder="Ex: Furações / Puxadores" style="width: 100%; padding: 8px; font-size: 12px;" onkeydown="if(event.key==='Enter') App.submitCreateLibraryFolder()">
+      </div>
+
+      <div class="modal-actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="App.closeNewLibraryFolderModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.submitCreateLibraryFolder()">Criar Pasta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Magazine Assign Modal -->
+  <div class="magazine-modal" id="magazine-modal">
+    <div class="magazine-modal-content">
+      <h3 id="magazine-modal-title">Posição T1</h3>
+      <div id="magazine-modal-tools"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="ToolsManager.closeModal()">Cancelar</button>
+        <button class="btn btn-danger btn-sm" id="modal-clear-btn" onclick="ToolsManager.clearSlot()">Limpar</button>
+        <button class="btn btn-primary" onclick="ToolsManager.confirmSlot()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Array Copy (Matriz Retangular X/Y) Floating Modal -->
+  <div class="op-modal" id="array-copy-modal">
+    <div class="op-modal-dialog" id="array-copy-dialog" style="width: 440px;">
+      <div class="op-modal-header" id="array-copy-header" style="cursor: grab;">
+        <div class="op-modal-title-wrap">
+          <span class="op-modal-icon">❖</span>
+          <h3 id="array-copy-title">Repetição em Matriz Retangular (X / Y)</h3>
+        </div>
+        <button class="op-modal-close" onclick="App.closeArrayCopyModal()">✕</button>
+      </div>
+
+      <div class="op-modal-body" style="padding: 16px;">
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">
+          Duplica a operação selecionada criando uma grade de cópias alinhadas em X e Y.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Número em X (Colunas)</label>
+            <input type="number" id="array-count-x" value="3" min="1" step="1" style="width: 100%; padding: 8px; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Número em Y (Linhas)</label>
+            <input type="number" id="array-count-y" value="2" min="1" step="1" style="width: 100%; padding: 8px; font-size: 12px;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Distância em X (mm)</label>
+            <input type="number" id="array-dist-x" value="250" step="1" style="width: 100%; padding: 8px; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Distância em Y (mm)</label>
+            <input type="number" id="array-dist-y" value="250" step="1" style="width: 100%; padding: 8px; font-size: 12px;">
+          </div>
+        </div>
+
+        <div id="array-copy-preview-info" style="font-size: 11px; color: var(--accent); background: rgba(0, 180, 216, 0.1); border: 1px solid rgba(0, 180, 216, 0.3); padding: 8px 12px; border-radius: 6px; margin-bottom: 16px;">
+          💡 Total na matriz: 6 elementos (1 original + 5 cópias)
+        </div>
+      </div>
+
+      <div class="op-modal-footer" style="padding: 12px 16px; display: flex; justify-content: flex-end; gap: 8px; background: rgba(0, 0, 0, 0.2); border-top: 1px solid var(--border);">
+        <button class="btn btn-secondary" onclick="App.closeArrayCopyModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.applyArrayCopy()">🚀 Aplicar Matriz</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ripado / Matriz de Rasgos Floating Modal -->
+  <div class="op-modal" id="ripado-modal">
+    <div class="op-modal-dialog" id="ripado-dialog" style="width: 480px;">
+      <div class="op-modal-header" id="ripado-header" style="cursor: grab;">
+        <div class="op-modal-title-wrap">
+          <span class="op-modal-icon">║║</span>
+          <h3 id="ripado-title">Usinagem de Ripado / Rasgos Paralelos</h3>
+        </div>
+        <button class="op-modal-close" onclick="App.closeRipadoModal()">✕</button>
+      </div>
+
+      <div class="op-modal-body" style="padding: 16px;">
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">
+          Gera uma série de usinagens paralelas distribuídas com vãos livres rigorosamente iguais na região delimitada.
+        </p>
+
+        <!-- Orientação -->
+        <div class="form-group mb-12">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Orientação dos Rasgos:</label>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm ripado-dir-btn active" id="ripado-dir-vert" onclick="App.setRipadoOrientation('vertical')" type="button" style="flex: 1; padding: 8px; font-weight: 600;">║ Verticais</button>
+            <button class="btn btn-secondary btn-sm ripado-dir-btn" id="ripado-dir-horiz" onclick="App.setRipadoOrientation('horizontal')" type="button" style="flex: 1; padding: 8px; font-weight: 600;">═ Horizontais</button>
+          </div>
+        </div>
+
+        <!-- Recuos das 4 Bordas -->
+        <div class="section-subtitle mb-8" style="font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase;">Recuos das 4 Bordas (mm)</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 600;" id="ripado-label-l1">L1 (Recuo Esquerdo)</label>
+            <input type="text" id="ripado-l1" value="50" oninput="App.updateRipadoPreview()" style="width: 100%; padding: 6px; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 600;" id="ripado-label-l2">L2 (Recuo Direito)</label>
+            <input type="text" id="ripado-l2" value="50" oninput="App.updateRipadoPreview()" style="width: 100%; padding: 6px; font-size: 12px;">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 600;" id="ripado-label-a1">A1 (Recuo Inferior)</label>
+            <input type="text" id="ripado-a1" value="0" oninput="App.updateRipadoPreview()" style="width: 100%; padding: 6px; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 600;" id="ripado-label-a2">A2 (Recuo Superior)</label>
+            <input type="text" id="ripado-a2" value="0" oninput="App.updateRipadoPreview()" style="width: 100%; padding: 6px; font-size: 12px;">
+          </div>
+        </div>
+
+        <!-- Parâmetros da Usinagem -->
+        <div class="section-subtitle mb-8" style="font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase;">Especificações dos Rasgos</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Quantidade de Rasgos</label>
+            <input type="number" id="ripado-count" value="5" min="1" step="1" oninput="App.updateRipadoPreview()" style="width: 100%; padding: 6px; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Largura do Rasgo (mm)</label>
+            <input type="text" id="ripado-width" value="10" oninput="App.updateRipadoPreview()" style="width: 100%; padding: 6px; font-size: 12px;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Profundidade (mm)</label>
+            <input type="text" id="ripado-depth" value="5" oninput="App.updateRipadoPreview()" style="width: 100%; padding: 6px; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 700;">Fresa / Ferramenta</label>
+            <select id="ripado-tool-select" style="width: 100%; padding: 6px; font-size: 11px;" onchange="App.updateRipadoPreview()"></select>
+          </div>
+        </div>
+
+        <!-- Opções de Percurso (Zigzag) -->
+        <div class="section-subtitle mb-8" style="font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase;">Estratégia de Percurso</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; background: rgba(255,255,255,0.02); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="ripado-zigzag-simple" onchange="App.onRipadoZigzagChange('simple')">
+              <span>⚡ Zigzag (Linhas Soltas)</span>
+            </label>
+            <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="ripado-zigzag-continuous" onchange="App.onRipadoZigzagChange('continuous')">
+              <span>🔗 Zigzag (Com Amarração)</span>
+            </label>
+          </div>
+          <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;">
+            <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="ripado-zigzag-halves" onchange="App.onRipadoZigzagChange('halves')">
+              <span>🔀 Usinar por Metades (Ir até metade / Pular p/ última)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Indicador de Espaçamento Livre em Tempo Real -->
+        <div id="ripado-calc-result" style="font-size: 11px; font-weight: 600; color: #00e676; background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.3); padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; text-align: center;">
+          📏 Espaçamento entre rasgos (Vão Livre): -- mm
+        </div>
+      </div>
+
+      <div class="op-modal-footer" style="padding: 12px 16px; display: flex; justify-content: flex-end; gap: 8px; background: rgba(0, 0, 0, 0.2); border-top: 1px solid var(--border);">
+        <button class="btn btn-secondary" onclick="App.closeRipadoModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.generateRipado()">🚀 Gerar Ripado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Piece to Project Folder Modal -->
+  <div class="magazine-modal" id="save-piece-modal">
+    <div class="magazine-modal-content" style="width: 420px;">
+      <h3 style="margin-bottom: 12px; font-size: 15px; color: var(--accent);">💾 Salvar Peça no Projeto</h3>
+      
+      <div class="form-group">
+        <label>Nome / Código da Pasta (Projeto)</label>
+        <input type="text" id="save-piece-folder-name" placeholder="Ex: 815454" style="width: 100%; padding: 8px; font-size: 12px;">
+      </div>
+      
+      <div class="form-group" style="margin-top: 10px;">
+        <label>Nome da Peça</label>
+        <input type="text" id="save-piece-name" placeholder="Ex: Porta Superior 1" style="width: 100%; padding: 8px; font-size: 12px;">
+      </div>
+
+      <div class="modal-actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="App.closeSavePieceModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.submitSavePiece()">💾 Salvar Peça</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- License & Activation Modal -->
+  <div class="magazine-modal" id="license-modal">
+    <div class="magazine-modal-content" style="width: 440px;">
+      <h3 style="margin-bottom: 8px; font-size: 15px; color: var(--accent); display: flex; align-items: center; justify-content: space-between;">
+        <span>🔑 Ativação de Licença do Software</span>
+        <button onclick="App.closeLicenseModal()" style="background: none; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
+      </h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">
+        Sincro280r NC Generator — Licenciamento por Computador
+      </p>
+
+      <div style="background: var(--bg-card); padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 14px;">
+        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">1. ID da Sua Máquina (Machine ID)</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="license-modal-mid" readonly style="flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--bg-input); border: 1px solid var(--border); padding: 6px 8px; border-radius: 4px;">
+          <button class="btn btn-secondary btn-sm" onclick="App.copyMachineId()" title="Copiar ID da Máquina">📋 Copiar ID</button>
+        </div>
+        <div style="font-size: 10px; color: #ff8a8a; margin-top: 6px;">
+          📌 Envie este ID para o suporte/vendedor para receber sua chave de ativação.
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text);">2. Chave de Ativação</label>
+        <input type="text" id="license-modal-input" placeholder="Cole sua chave (Ex: SINCRO-VIT-0-F8A2D91B)" style="width: 100%; padding: 8px; font-size: 12px; font-family: 'JetBrains Mono', monospace; margin-top: 4px;">
+      </div>
+
+      <div id="license-modal-status-card" style="font-size: 11px; padding: 10px; border-radius: 6px; margin-bottom: 14px; background: rgba(255, 214, 0, 0.1); border: 1px solid rgba(255, 214, 0, 0.3); color: #ffd600;">
+        Carregando status da licença...
+      </div>
+
+      <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="App.closeLicenseModal()">Fechar</button>
+        <button class="btn btn-primary" onclick="App.submitLicenseActivation()">🚀 Ativar Licença</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="./js/storage.js"></script>
+  <script src="./js/license-manager.js"></script>
+  <script src="./js/nc-generator.js"></script>
+  <script src="./js/nesting-engine.js"></script>
+  <script src="./js/tool-3d-renderer.js"></script>
+  <script src="./js/tools-manager.js"></script>
+  <script src="./js/piece-editor.js"></script>
+  <script src="./js/nc-viewer.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

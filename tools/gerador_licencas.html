@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador Privado de Licenças — Sincro280r</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --card: #121724;
+      --card-inner: #192030;
+      --accent: #00b4d8;
+      --green: #00e676;
+      --border: #242c42;
+      --text: #e6ebf5;
+      --muted: #8c96ac;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .box {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+    .logo {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--accent);
+    }
+    .badge-privado {
+      background: rgba(255, 82, 82, 0.15);
+      color: #ff5252;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select {
+      width: 100%;
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+      transition: 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+    .radio-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .radio-btn {
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .radio-btn.active {
+      border-color: var(--accent);
+      background: rgba(0, 180, 216, 0.15);
+      color: var(--accent);
+    }
+    .btn-gen {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      padding: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-gen:hover {
+      filter: brightness(1.1);
+    }
+    .result-box {
+      margin-top: 24px;
+      background: var(--card-inner);
+      border: 1px dashed var(--green);
+      border-radius: 8px;
+      padding: 16px;
+      display: none;
+    }
+    .result-key {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--green);
+      text-align: center;
+      margin: 10px 0;
+      letter-spacing: 1px;
+      word-break: break-all;
+    }
+    .btn-copy {
+      width: 100%;
+      background: #00e676;
+      color: #000;
+      font-weight: 700;
+      font-size: 12px;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="header">
+      <div class="logo">🔑 Sincro280r — Keygen Admin</div>
+      <span class="badge-privado">Uso Privado</span>
+    </div>
+
+    <div class="form-group">
+      <label>1. ID da Máquina do Cliente (Machine ID)</label>
+      <input type="text" id="machine-id" placeholder="Ex: SYNC-A8F3-9D21-78E2">
+    </div>
+
+    <label>2. Tipo de Licença</label>
+    <div class="radio-group">
+      <div class="radio-btn active" data-type="VIT" onclick="setType('VIT')">Vitalícia</div>
+      <div class="radio-btn" data-type="ANU" onclick="setType('ANU')">Anual (365d)</div>
+      <div class="radio-btn" data-type="MEN" onclick="setType('MEN')">Mensal (30d)</div>
+    </div>
+
+    <button class="btn-gen" onclick="generateKey()">🚀 Gerar Chave de Licença</button>
+
+    <div class="result-box" id="result-box">
+      <div style="font-size: 11px; color: var(--muted); text-align: center; text-transform: uppercase;">Chave Gerada com Sucesso</div>
+      <div class="result-key" id="result-key">SINCRO-VIT-0-XXXXXXXX</div>
+
+      <button class="btn-copy" onclick="copyWhatsAppMessage()">💬 Copiar Mensagem Pronta para WhatsApp</button>
+    </div>
+  </div>
+
+  <script>
+    const MASTER_SECRET = 'SINCRO280R_MASTER_SECRET_KEY_2026_NC_GEN';
+    let currentType = 'VIT';
+
+    function setType(type) {
+      currentType = type;
+      document.querySelectorAll('.radio-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    }
+
+    function simpleHash(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(16).padStart(12, '0');
+    }
+
+    function hashHMAC(text, secret) {
+      let hash1 = simpleHash(text + secret);
+      let hash2 = simpleHash(secret + text + hash1);
+      return (hash1 + hash2).substring(0, 8).toUpperCase();
+    }
+
+    function generateKey() {
+      const midInput = document.getElementById('machine-id').value.trim().toUpperCase();
+      if (!midInput) {
+        alert('Por favor, informe o ID da Máquina do cliente!');
+        return;
+      }
+
+      let expiryTimestamp = 0;
+      if (currentType === 'ANU') expiryTimestamp = Date.now() + 365 * 24 * 60 * 60 * 1000;
+      else if (currentType === 'MEN') expiryTimestamp = Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+      const expiryHex = expiryTimestamp > 0 ? expiryTimestamp.toString(16).toUpperCase() : '0';
+      const payload = `${midInput}:${currentType}:${expiryHex}`;
+      const signature = hashHMAC(payload, MASTER_SECRET);
+
+      const generatedKey = `SINCRO-${currentType}-${expiryHex}-${signature}`;
+      
+      document.getElementById('result-key').textContent = generatedKey;
+      document.getElementById('result-box').style.display = 'block';
+    }
+
+    function copyWhatsAppMessage() {
+      const mid = document.getElementById('machine-id').value.trim().toUpperCase();
+      const key = document.getElementById('result-key').textContent;
+      let labelType = 'Vitalícia';
+      if (currentType === 'ANU') labelType = 'Anual (365 dias)';
+      if (currentType === 'MEN') labelType = 'Mensal (30 dias)';
+
+      const msg = `Olá! Aqui está a sua Chave de Ativação do Sincro280r NC Generator:\n\n💻 ID da Máquina: ${mid}\n📜 Tipo de Licença: ${labelType}\n🔑 Chave de Ativação: ${key}\n\nCole esta chave no programa para liberar o sistema completo. Obrigado!`;
+      
+      navigator.clipboard.writeText(msg);
+      alert('Mensagem formatada copiada com sucesso! Cole no WhatsApp do cliente.');
+    }
+  </script>
+</body>
+</html>
